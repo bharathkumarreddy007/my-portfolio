@@ -22,7 +22,7 @@ The production site is generated in `dist/`. Fonts, icons, and the initial profi
 
 ## Publish with GitHub Pages
 
-The workflow in `.github/workflows/deploy.yml` tests, builds, and deploys the site whenever `main` changes. It sets an existing Pages site's build source to **GitHub Actions** before deployment. To use this workflow in a different repository that has never enabled Pages, enable it once in **Settings → Pages**, then run **Publish portfolio to GitHub Pages** from the Actions tab if necessary.
+The workflow in `.github/workflows/deploy.yml` tests, builds, and deploys the site whenever `main` changes. In the repository's **Settings → Pages**, set the build source to **GitHub Actions** once to avoid competing deployments from the old branch-based setup. Run **Publish portfolio to GitHub Pages** from the Actions tab if necessary. The deployment workflow does not change repository settings.
 
 The expected address for this repository is `https://bharathkumarreddy007.github.io/my-portfolio/`. Check the deployment result in Actions before treating that address as live. Relative asset URLs support this project path and custom domains.
 
