@@ -1,52 +1,67 @@
-# Bharath — an editable portfolio
+# Bharath — a creative developer portfolio
 
-A responsive portfolio built with React, Vite, Framer Motion, and Lucide icons. It includes a profile, professional summary, filterable project case studies, project videos, a résumé library, an optional experience timeline, and a browser-based editing studio.
+A public, view-only portfolio built with React, Vite, Framer Motion, and Three.js. It includes a playful profile collage, project case studies, video support, a résumé library, skills, an optional experience timeline, and an interactive 3D sculpture with scroll-driven movement.
 
-## Run locally
+## Run in VS Code
 
-Requires Node.js 20.19+ or 22.12+ (Node 24 is verified).
+Requires Node.js 20.19+ or 22.12+; Node 24 is used by the deployment workflow.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Build and serve the production output:
+Build with `npm run build`; the production output is in `dist/`. Use `npm run preview` to check that build locally. Fonts and 3D lighting are bundled or generated locally, so the site needs no runtime credentials or external font/3D services.
 
-```sh
-npm run build
-npm run preview
+## Make your own changes
+
+**All portfolio content comes from `src/data.js`.** Edit it in VS Code or on GitHub, then commit and push to `main`. The GitHub Actions workflow tests, builds, and publishes the updated site for everyone.
+
+- `profile`: your name, role, headline, introduction, professional summary, availability, location, contact links, photo, and skills.
+- `projects`: add as many project objects as you need, each with a unique `id`, category, tags, description, challenge, solution, outcome, live link, and code link. Categories automatically become filters.
+- `resumes`: add résumé objects with a unique `id`, title, detail, date, and document URL. The first résumé is marked primary.
+- `experience`: add work, internship, or education entries with `id`, `role`, `company`, `period`, and `description`. The section appears when entries exist.
+
+The public site has no editor, upload forms, or content-saving endpoints. It ignores content left in IndexedDB by the old browser editor. Visitor interactions only change presentation, such as a color mood or the angle of the 3D sculpture. The color preference is stored locally; content is always loaded from the published source.
+
+### Add photos, videos, and PDFs
+
+Place files in `public/media/`. On GitHub, open that directory and choose **Add file → Upload files**. Then update `src/data.js` with the path relative to the public directory:
+
+```js
+// Profile
+photo: "media/profile.jpg",
+
+// Within a project
+cover: "media/project-cover.webp",
+video: "media/project-demo.mp4",
+
+// Within a résumé object
+url: "media/full-stack-resume.pdf",
 ```
 
-The production site is generated in `dist/`. Fonts, icons, and the initial profile photo are bundled locally. No runtime API keys or external font requests are needed.
+Full HTTPS URLs also work. JPG/PNG/WebP images, MP4/WebM videos, and PDF résumés are recommended. Local résumé paths download directly; external résumé links open in a new tab. Videos use controls and never autoplay. The existing profile image remains the fallback if `profile.photo` is `null`.
 
-## Publish with GitHub Pages
+Everything in `public/` is publicly accessible. GitHub's browser uploader accepts files up to 25 MiB and regular Git rejects files larger than 100 MiB. Use compressed videos or an HTTPS video-hosting URL for large media. Prefer filenames without spaces and keep `id` values unique.
 
-The workflow in `.github/workflows/deploy.yml` tests, builds, and deploys the site whenever `main` changes. In the repository's **Settings → Pages**, set the build source to **GitHub Actions** once to avoid competing deployments from the old branch-based setup. Run **Publish portfolio to GitHub Pages** from the Actions tab if necessary. The deployment workflow does not change repository settings.
+### Change the design
 
-The expected address for this repository is `https://bharathkumarreddy007.github.io/my-portfolio/`. Check the deployment result in Actions before treating that address as live. Relative asset URLs support this project path and custom domains.
+- `src/styles.css`: colors, typography, layout, and responsive rules.
+- `src/CreativeHero.jsx`: profile collage, draggable shapes, color moods, and 3D section copy.
+- `src/ThreeScene.jsx`: sculpture geometry, materials, lighting, camera, and scene interactions.
+- `src/App.jsx`: public sections and project dialogs.
 
-Publishing includes the default profile and project content in `src/data.js`. Browser-only edits and uploaded files remain local; they are not automatically included in GitHub deployments.
+## Publish
 
-## Edit your portfolio
+The workflow in `.github/workflows/deploy.yml` runs on every push to `main` and can also be started from the Actions tab. In **Settings → Pages**, use **GitHub Actions** as the source to avoid competing deployments from the old branch-based setup.
 
-Select **Edit portfolio**, choose a tab, make changes, then select **Save changes**.
+Site address: `https://bharathkumarreddy007.github.io/my-portfolio/`. Check the latest workflow's deployment result after a push. Relative asset paths support the repository subdirectory and a custom domain.
 
-- **Profile:** name, photo, role, availability, headline, summary, contact links, and skills.
-- **Projects:** add or remove projects, write challenge/approach/outcome case studies, add live and code links, and upload a cover and a video for each project. Custom categories become filters automatically.
-- **Résumés:** upload several PDFs at once or add document links. Rename each version, add its target role, and choose a primary résumé.
-- **Experience:** add work, internships, education, or other milestones. This section stays hidden until an entry is added.
-- **Backup:** export your portfolio, including uploaded files, to JSON. Import it into another browser, review the draft, and save to restore it.
+## Interaction, performance, and accessibility
 
-The first version uses **IndexedDB in the current browser**, as requested. Changes persist after refresh on the same website address. They do not sync across devices or change the content seen by other visitors. Clearing site data removes local changes; export backups regularly. The editing studio is not an authenticated online CMS.
+The 3D scene loads when its section approaches the viewport. Rendering pauses when it leaves the screen or the browser tab becomes hidden. Pixel density is capped to limit GPU work. The scene includes drag, arrow-key, and button controls, plus a static-art fallback if WebGL is unavailable. Vertical touch gestures remain available for page scrolling.
 
-There is no application limit on the number of projects or résumés you can create; browser storage quota is the practical limit. Each uploaded file must be under 100 MB. PDF is supported for résumés; JPEG, PNG, WebP, GIF, and AVIF for images. MP4 and WebM are recommended for video playback; Ogg and QuickTime depend on browser codec support. Backups include files and can be large (imports are limited to 500 MB). Videos load on demand and never autoplay.
-
-The initial content is in `src/data.js`. Change that file to update the defaults included in a future public build. Browser backups are intended for portability, not deployment. Contact opens your email app; there is no server-side contact form or email delivery service.
-
-## Motion and accessibility
-
-Scroll reveals and the reading-progress indicator use Framer Motion. Native smooth scrolling, hover interactions, and the animated banner respect the reduced-motion preference. Dialogs use the native modal element for focus containment and Escape handling. Inputs are labelled; menus and filters expose their state.
+The animation control pauses the decorative animations. The operating system's reduced-motion setting also disables automatic movement and scroll effects while keeping manual interaction available. Case studies use native modal dialogs for focus containment and Escape handling.
 
 ## Verify
 
@@ -55,6 +70,6 @@ npm test
 npm run build
 ```
 
-The Playwright suite covers profile/photo/experience persistence, project uploads and video playback, filtering and deletion, multiple PDF uploads and downloads, backup restoration into a separate browser context, invalid input handling, and mobile navigation. It uses `/usr/bin/chromium` when available; otherwise install Playwright Chromium with `npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to your browser binary. Tests use isolated browser contexts and do not change real user data.
+The seven Playwright tests cover removal of editing controls, stale browser-data isolation, project filtering and dialogs, color and motion controls, source-defined video/PDF assets, responsive layouts, actual WebGL rendering and keyboard controls, and the no-WebGL fallback. Tests use isolated contexts and a software WebGL renderer. If `/usr/bin/chromium` is unavailable, install the browser with `npx playwright install chromium` or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
 
-`npm run format` formats the source. Repository source is in `src/`, test fixtures are in `tests/fixtures/`, and generated build/test output is ignored by Git.
+Use `npm run format` to format source files. Generated dependencies, build output, and test results are ignored by Git.

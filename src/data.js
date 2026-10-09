@@ -1,12 +1,15 @@
+// Edit this file in GitHub or VS Code, then push to main to publish.
+// Put images, videos, and PDFs in public/media/ and reference them as "media/filename.ext".
+// profile.photo, project.cover, and project.video accept those paths or HTTPS URLs.
 export const initialData = {
   version: 1,
   profile: {
     name: "A.V. Bharath Kumar Reddy",
     shortName: "Bharath",
     role: "Full-stack developer & AI enthusiast",
-    headline: "Thoughtful code.\nMeaningful impact.",
+    headline: "Build things.\nBreak boring.",
     intro:
-      "I turn complex problems into simple, thoughtful digital experiences. Building for the web. Exploring what’s next in AI.",
+      "A curious developer turning “what if?” into things you can click, use, and love. Full-stack thinking. A soft spot for AI.",
     summary:
       "I’m a final-year student and curious builder at the intersection of software, data, and design. I enjoy connecting the dots — from an idea on paper to a working product that makes someone’s day a little easier.",
     summaryExtra:
@@ -100,7 +103,6 @@ export const initialData = {
       detail: "Professional background & skills",
       date: "",
       url: "https://drive.google.com/file/d/1pp4AJqVZAAVXqH6xTy7bdN1h85g72gkd/view",
-      file: null,
     },
   ],
 };

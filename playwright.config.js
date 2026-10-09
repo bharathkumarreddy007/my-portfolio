@@ -12,7 +12,12 @@ export default defineConfig({
       executablePath:
         process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
         (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined),
-      args: ["--no-sandbox", "--disable-dev-shm-usage"],
+      args: [
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader",
+      ],
     },
   },
   webServer: {

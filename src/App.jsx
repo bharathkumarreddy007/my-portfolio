@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { motion, useScroll, useSpring, MotionConfig } from "framer-motion";
+import {
+  motion,
+  useScroll,
+  useSpring,
+  MotionConfig,
+  useReducedMotion,
+} from "framer-motion";
 import {
   ArrowUpRight,
   ArrowDown,
@@ -8,8 +14,7 @@ import {
   Github,
   Linkedin,
   MapPin,
-  Plus,
-  Pencil,
+  Pause,
   FileText,
   Download,
   Play,
@@ -24,12 +29,13 @@ import {
 } from "lucide-react";
 import portrait from "../profile.jpg";
 import { initialData } from "./data";
-import { readPortfolio, savePortfolio, safeUrl } from "./storage";
-import { Reveal, Modal, useFileUrl, ExternalLink } from "./ui";
-import Studio from "./Studio";
+import { mediaUrl, safeUrl } from "./media";
+import { Reveal, Modal, ExternalLink } from "./ui";
+import CreativeHero, { Tilt, Playground, Burst } from "./CreativeHero";
+import { MotionPreference } from "./ui";
 
 function ProjectVisual({ project }) {
-  const cover = useFileUrl(project.cover);
+  const cover = mediaUrl(project.cover);
   if (cover)
     return (
       <img
@@ -116,47 +122,58 @@ function ProjectVisual({ project }) {
 }
 function ProjectCard({ project, index, onOpen }) {
   return (
-    <Reveal delay={(index % 2) * 0.08} className="project-card">
-      <button
-        className="project-image-button"
-        onClick={() => onOpen(project)}
-        aria-label={`View ${project.title}`}
-      >
-        <ProjectVisual project={project} />
-        <span className="project-float-tag">
-          {project.video ? (
-            <>
-              <Play size={13} /> VIDEO WALKTHROUGH
-            </>
-          ) : (
-            project.category
-          )}
-        </span>
-        <span className="project-open">
-          <ArrowUpRight size={25} />
-        </span>
-      </button>
-      <div className="project-meta">
-        <span>
-          {String(index + 1).padStart(2, "0")} / {project.category}
-        </span>
-        <span>{project.year}</span>
-      </div>
-      <button className="project-title" onClick={() => onOpen(project)}>
-        <h3>{project.title}</h3>
-        <ArrowUpRight size={22} />
-      </button>
-      <p className="project-description">{project.description}</p>
-      <div className="tags">
-        {project.tags.map((tag, i) => (
-          <span key={i}>{tag}</span>
-        ))}
-      </div>
+    <Reveal
+      delay={(index % 2) * 0.08}
+      className={`project-card ${index === 0 ? "featured-project" : ""}`}
+    >
+      <Tilt className="project-card-surface" intensity={2}>
+        <button
+          className="project-image-button"
+          onClick={() => onOpen(project)}
+          aria-label={`View ${project.title}`}
+        >
+          <ProjectVisual project={project} />
+          <span className="project-float-tag">
+            {project.video ? (
+              <>
+                <Play size={13} /> WATCH THE WALKTHROUGH
+              </>
+            ) : (
+              project.category
+            )}
+          </span>
+          <span className="project-open">
+            <ArrowUpRight size={25} />
+          </span>
+        </button>
+        <div className="project-card-body">
+          <div className="project-meta">
+            <span>PROJECT / {String(index + 1).padStart(2, "0")}</span>
+            <span>{project.year}</span>
+          </div>
+          <button className="project-title" onClick={() => onOpen(project)}>
+            <h3>{project.title}</h3>
+            <ArrowUpRight size={22} />
+          </button>
+          <p className="project-description">{project.description}</p>
+          <div className="tags">
+            {project.tags.map((tag, i) => (
+              <span key={i}>{tag}</span>
+            ))}
+          </div>
+          <button
+            className="project-case-link text-link"
+            onClick={() => onOpen(project)}
+          >
+            Explore the project <ArrowRight size={16} />
+          </button>
+        </div>
+      </Tilt>
     </Reveal>
   );
 }
 function ProjectDetail({ project, onClose }) {
-  const video = useFileUrl(project.video);
+  const video = mediaUrl(project.video);
   return (
     <Modal title={project.title} onClose={onClose} wide>
       <div className="case-study">
@@ -215,7 +232,8 @@ function ProjectDetail({ project, onClose }) {
   );
 }
 function ResumeCard({ resume, index }) {
-  const url = useFileUrl(resume.file, safeUrl(resume.url));
+  const url = mediaUrl(resume.url);
+  const isDownload = !!resume.url && !/^https?:/i.test(resume.url);
   return (
     <div className="resume-card">
       <div className="resume-icon">
@@ -226,7 +244,7 @@ function ResumeCard({ resume, index }) {
           {index === 0
             ? "PRIMARY RÉSUMÉ"
             : `VERSION ${String(index + 1).padStart(2, "0")}`}
-          {resume.file ? " · PDF" : ""}
+          {isDownload ? " · PDF" : ""}
         </span>
         <h3>{resume.title}</h3>
         <p>
@@ -237,45 +255,54 @@ function ResumeCard({ resume, index }) {
       {url && (
         <a
           href={url}
-          download={
-            resume.file ? resume.file.name || `${resume.title}.pdf` : undefined
-          }
-          target={resume.file ? undefined : "_blank"}
+          download={isDownload ? `${resume.title}.pdf` : undefined}
+          target={isDownload ? undefined : "_blank"}
           rel="noopener noreferrer"
           className="icon-button"
-          aria-label={`${resume.file ? "Download" : "Open"} ${resume.title}`}
+          aria-label={`${isDownload ? "Download" : "Open"} ${resume.title}`}
         >
-          {resume.file ? <Download size={21} /> : <ArrowUpRight size={21} />}
+          {isDownload ? <Download size={21} /> : <ArrowUpRight size={21} />}
         </a>
       )}
     </div>
   );
 }
 export default function App() {
-  const [data, setData] = useState(initialData),
-    [loaded, setLoaded] = useState(false),
-    [studio, setStudio] = useState(null),
-    [activeProject, setActiveProject] = useState(null),
+  const data = initialData;
+  const [activeProject, setActiveProject] = useState(null),
     [filter, setFilter] = useState("All work"),
     [menu, setMenu] = useState(false),
     [toast, setToast] = useState(""),
     [copying, setCopying] = useState(false);
+  const [mood, setMood] = useState(() => {
+    try {
+      return ["violet", "blue", "pink"].includes(
+        localStorage.getItem("portfolio-mood"),
+      )
+        ? localStorage.getItem("portfolio-mood")
+        : "violet";
+    } catch {
+      return "violet";
+    }
+  });
+  const [animationEnabled, setAnimationEnabled] = useState(true);
+  const reducedMotion = useReducedMotion();
+  const motionActive = animationEnabled && !reducedMotion;
+  useEffect(() => {
+    document.documentElement.dataset.mood = mood;
+    try {
+      localStorage.setItem("portfolio-mood", mood);
+    } catch {}
+  }, [mood]);
+  useEffect(() => {
+    document.documentElement.dataset.motion = motionActive
+      ? "active"
+      : "paused";
+  }, [motionActive]);
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
-  const photo = useFileUrl(data.profile.photo, portrait);
+  const photo = mediaUrl(data.profile.photo, portrait);
   const p = data.profile;
-  useEffect(() => {
-    readPortfolio()
-      .then((saved) => {
-        if (saved) setData(saved);
-      })
-      .catch(() =>
-        setToast(
-          "Browser storage is unavailable. You can browse, but saving may be blocked.",
-        ),
-      )
-      .finally(() => setLoaded(true));
-  }, []);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(""), 6500);
@@ -284,12 +311,6 @@ export default function App() {
   useEffect(() => {
     document.title = `${p.name} — ${p.role}`;
   }, [p.name, p.role]);
-  async function save(next) {
-    await savePortfolio(next);
-    setData(next);
-    setStudio(null);
-    setToast("Your portfolio is saved in this browser.");
-  }
   async function copyEmail() {
     try {
       await navigator.clipboard.writeText(p.email);
@@ -311,397 +332,366 @@ export default function App() {
       x.category === filter,
   );
   return (
-    <MotionConfig reducedMotion="user">
-      <motion.div className="scroll-progress" style={{ scaleX: progress }} />
-      <header className="site-header">
-        <a className="wordmark" href="#home" aria-label="Go to top">
-          {p.shortName.toLowerCase()}
-          <ArrowUpRight size={25} />
-        </a>
-        <nav
-          className={menu ? "main-nav is-open" : "main-nav"}
-          aria-label="Main navigation"
-        >
-          {[
-            ["Work", "work"],
-            ["About", "about"],
-            ["Résumé", "resume"],
-            ["Contact", "contact"],
-          ].map(([text, id]) => (
-            <a href={`#${id}`} key={id} onClick={() => setMenu(false)}>
-              {text}
-            </a>
-          ))}
-        </nav>
-        <div className="header-actions">
-          <button
-            className="edit-button"
-            onClick={() => setStudio("Profile")}
-            disabled={!loaded}
-          >
-            <Pencil size={14} />
-            <span>Edit portfolio</span>
-          </button>
-          <button
-            className="menu-button icon-button"
-            aria-label={menu ? "Close menu" : "Open menu"}
-            aria-expanded={menu}
-            onClick={() => setMenu(!menu)}
-          >
-            {menu ? <X /> : <Menu />}
-          </button>
-        </div>
-      </header>
-      <main>
-        <section id="home" className="hero section-shell">
-          <div className="hero-copy">
-            <Reveal>
-              <div className="availability">
-                <span className="status-dot" />
-                {p.availability}
-              </div>
-              <p className="hero-intro">
-                HELLO, I’M {p.shortName.toUpperCase()} <span>—</span>
-              </p>
-              <h1>
-                {p.headline.split("\n").map((line, i) => (
-                  <React.Fragment key={i}>
-                    {i > 0 && <br />}
-                    <span className={i === 1 ? "serif" : ""}>{line}</span>
-                  </React.Fragment>
-                ))}
-              </h1>
-              <p className="hero-description">{p.intro}</p>
-              <div className="hero-actions">
-                <a href="#work" className="button button-dark">
-                  Explore my work <ArrowUpRight size={20} />
-                </a>
-                <a href="#contact" className="text-link">
-                  Let’s talk <ArrowRight size={18} />
-                </a>
-              </div>
-              <div className="hero-note">
-                <span className="small-cross">✳</span> A curious mind. A builder
-                at heart.
-              </div>
-            </Reveal>
-          </div>
-          <Reveal className="hero-portrait" delay={0.16}>
-            <div className="portrait-label">
-              <span>DEVELOPER. THINKER. BUILDER.</span>
-              <ArrowUpRight size={19} />
-            </div>
-            <div className="portrait-frame">
-              <img src={photo || undefined} alt={p.name} />
-              <div className="portrait-gradient" />
-              <div className="portrait-caption">
-                <span>{p.name}</span>
-                <small>
-                  <MapPin size={12} /> Based in {p.location}
-                </small>
-              </div>
-            </div>
-            <div className="portrait-sticker">
-              <Code2 size={29} />
-              <span>
-                MADE OF
-                <br />
-                <b>CURIOSITY.</b>
-              </span>
-            </div>
-            <span className="portrait-coordinates">
-              ALWAYS LEARNING / ALWAYS BUILDING
+    <MotionPreference.Provider value={motionActive}>
+      <MotionConfig reducedMotion={motionActive ? "user" : "always"}>
+        <motion.div
+          className="scroll-progress"
+          style={{ scaleX: motionActive ? progress : scrollYProgress }}
+        />
+        <header className="site-header">
+          <a className="wordmark" href="#home" aria-label="Go to top">
+            <span className="brand-mark" aria-hidden="true">
+              <Burst />
             </span>
-          </Reveal>
-          <div className="hero-bottom">
-            <a href="#work">
-              <ArrowDown size={14} /> SCROLL TO EXPLORE
-            </a>
-            <span>{p.role}</span>
-            <span className="tiny-star">✳</span>
-          </div>
-        </section>
-        <div className="ticker" aria-hidden="true">
-          <div>
+            {p.shortName.toLowerCase()}
+            <span className="brand-dot">.</span>
+          </a>
+          <nav
+            className={menu ? "main-nav is-open" : "main-nav"}
+            aria-label="Main navigation"
+          >
             {[
-              "IDEAS INTO EXPERIENCES",
-              "CODE WITH INTENTION",
-              "ALWAYS CURIOUS",
-              "IDEAS INTO EXPERIENCES",
-              "CODE WITH INTENTION",
-              "ALWAYS CURIOUS",
-            ].map((t, i) => (
-              <React.Fragment key={i}>
-                <span>{t}</span>
-                <b>✳</b>
-              </React.Fragment>
+              ["Work", "work"],
+              ["About", "about"],
+              ["Résumé", "resume"],
+              ["Contact", "contact"],
+            ].map(([text, id]) => (
+              <a href={`#${id}`} key={id} onClick={() => setMenu(false)}>
+                {text}
+              </a>
             ))}
-          </div>
-        </div>
-        <section id="work" className="section-shell work-section">
-          <Reveal className="section-heading">
-            <div>
-              <span className="eyebrow">01 / SELECTED WORK</span>
-              <h2>
-                Built with purpose.
-                <br />
-                <span className="serif">Made to matter.</span>
-              </h2>
-            </div>
-            <p>
-              A few projects, a lot of curiosity.
-              <br />
-              Each one is a new way to solve a problem.
-            </p>
-          </Reveal>
-          <div className="work-toolbar">
-            <div className="filter-list" aria-label="Filter projects">
-              {filters.map((f) => (
-                <button
-                  key={f}
-                  className={filter === f ? "filter active" : "filter"}
-                  aria-pressed={filter === f}
-                  onClick={() => setFilter(f)}
-                >
-                  {f}
-                  {f === "All work" && (
-                    <span>
-                      {data.projects.length.toString().padStart(2, "0")}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <span className="small-label">A COLLECTION IN PROGRESS ↗</span>
-          </div>
-          <div className="project-grid">
-            {visible.map((project, i) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                index={i}
-                onOpen={setActiveProject}
-              />
-            ))}
-          </div>
-          {!data.projects.length && (
-            <div className="empty-public">
-              <Layers size={30} />
-              <h3>Great things start with a first project.</h3>
-              <button
-                className="text-link"
-                onClick={() => setStudio("Projects")}
-              >
-                Add your work <Plus size={16} />
-              </button>
-            </div>
-          )}
-          <div className="work-footnote">
-            <span>Always making room for the next idea.</span>
-            <button className="text-link" onClick={() => setStudio("Projects")}>
-              Add a project <Plus size={16} />
+          </nav>
+          <div className="header-actions">
+            <button
+              className="motion-toggle icon-button"
+              aria-label={
+                reducedMotion
+                  ? "Reduced motion is enabled on your device"
+                  : motionActive
+                    ? "Pause animations"
+                    : "Enable animations"
+              }
+              title={
+                reducedMotion
+                  ? "Your device prefers reduced motion"
+                  : motionActive
+                    ? "Pause animations"
+                    : "Enable animations"
+              }
+              disabled={!!reducedMotion}
+              onClick={() => setAnimationEnabled(!animationEnabled)}
+            >
+              {motionActive ? <Pause size={16} /> : <Play size={16} />}
+            </button>
+            <a className="header-contact" href="#contact">
+              Let’s talk <ArrowUpRight size={16} />
+            </a>
+            <button
+              className="menu-button icon-button"
+              aria-label={menu ? "Close menu" : "Open menu"}
+              aria-expanded={menu}
+              onClick={() => setMenu(!menu)}
+            >
+              {menu ? <X /> : <Menu />}
             </button>
           </div>
-        </section>
-        <section id="about" className="about-section">
-          <div className="section-shell">
-            <Reveal className="about-grid">
-              <div>
-                <span className="eyebrow">02 / THE PERSON BEHIND THE CODE</span>
-                <h2>
-                  More than
-                  <br />a <span className="serif">job title.</span>
-                  <span className="about-asterisk">✳</span>
-                </h2>
-                <div className="about-location">
-                  <MapPin size={17} />
-                  {p.location}
-                  <span> / </span>Open to what’s next
-                </div>
-              </div>
-              <div className="about-copy">
-                <p className="summary-lead">{p.summary}</p>
-                <p>{p.summaryExtra}</p>
-                <div className="about-signature">
-                  <span className="signature">{p.shortName}.</span>
-                  <span>{p.role}</span>
-                </div>
-              </div>
-            </Reveal>
-            <Reveal className="toolkit">
-              <div>
-                <span className="eyebrow">MY EVERYDAY TOOLKIT</span>
-                <p>
-                  The tools change.
-                  <br />
-                  The curiosity stays.
-                </p>
-              </div>
-              <div className="skills">
-                {p.skills.map((skill, i) => (
-                  <span key={i}>
-                    <span className="skill-dot" />
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </Reveal>
+        </header>
+        <main>
+          <CreativeHero
+            profile={p}
+            photo={photo}
+            mood={mood}
+            setMood={setMood}
+          />
+          <div className="ticker" aria-hidden="true">
+            <div>
+              {[
+                "BUILD SOMETHING GOOD",
+                "MAKE IT A LITTLE DIFFERENT",
+                "STAY CURIOUS",
+                "BUILD SOMETHING GOOD",
+                "MAKE IT A LITTLE DIFFERENT",
+                "STAY CURIOUS",
+              ].map((t, i) => (
+                <React.Fragment key={i}>
+                  <span>{t}</span>
+                  <b>
+                    <Sparkles size={24} />
+                  </b>
+                </React.Fragment>
+              ))}
+            </div>
           </div>
-        </section>
-        {data.experience.length > 0 && (
-          <section id="experience" className="section-shell experience-section">
+          <section id="work" className="section-shell work-section">
             <Reveal className="section-heading">
               <div>
-                <span className="eyebrow">THE JOURNEY</span>
+                <span className="eyebrow">01 — THE PROJECT FILES</span>
                 <h2>
-                  Learning. Building.
+                  Less talking.
                   <br />
-                  <span className="serif">Moving forward.</span>
+                  <span className="serif">
+                    More making<span className="orange-dot">.</span>
+                  </span>
                 </h2>
               </div>
-            </Reveal>
-            {data.experience.map((e) => (
-              <Reveal className="experience-row" key={e.id}>
-                <span>{e.period}</span>
-                <div>
-                  <h3>{e.role}</h3>
-                  <p className="experience-company">{e.company}</p>
-                  <p>{e.description}</p>
-                </div>
-                <BriefcaseBusiness size={23} />
-              </Reveal>
-            ))}
-          </section>
-        )}
-        <section id="resume" className="section-shell resume-section">
-          <Reveal className="resume-grid">
-            <div>
-              <span className="eyebrow">03 / THE BIGGER PICTURE</span>
-              <h2>
-                My story,
-                <br />
-                <span className="serif">on paper.</span>
-              </h2>
               <p>
-                Skills, experience, and everything in between.
-                <br />
-                Find the résumé that fits the conversation.
+                From a “what if” to a working thing.
+                <br />A collection of ideas I brought to life.
               </p>
-              <button
-                className="text-link"
-                onClick={() => setStudio("Résumés")}
-              >
-                Manage résumés <Plus size={16} />
-              </button>
+            </Reveal>
+            <div className="work-toolbar">
+              <div className="filter-list" aria-label="Filter projects">
+                {filters.map((f) => (
+                  <button
+                    key={f}
+                    className={filter === f ? "filter active" : "filter"}
+                    aria-pressed={filter === f}
+                    onClick={() => setFilter(f)}
+                  >
+                    {f}
+                    {f === "All work" && (
+                      <span>
+                        {data.projects.length.toString().padStart(2, "0")}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <span className="small-label">A COLLECTION IN PROGRESS ↗</span>
             </div>
-            <div className="resume-list">
-              {data.resumes.map((resume, i) => (
-                <ResumeCard key={resume.id} resume={resume} index={i} />
+            <div className="project-grid">
+              {visible.map((project, i) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  index={i}
+                  onOpen={setActiveProject}
+                />
               ))}
-              {!data.resumes.length && (
-                <div className="empty-public">
-                  <FileText size={30} />
-                  <h3>Your next opportunity starts here.</h3>
-                  <p>Add a résumé from the editing studio.</p>
-                </div>
-              )}
-              <div className="resume-note">
-                <FileText size={14} />
-                {data.resumes.length}{" "}
-                {data.resumes.length === 1 ? "résumé" : "résumés"} · Ready for
-                your next opportunity
-              </div>
             </div>
-          </Reveal>
-        </section>
-        <section id="contact" className="contact-section">
-          <div className="section-shell">
-            <Reveal>
-              <div className="contact-top">
-                <span className="eyebrow">04 / LET’S BUILD SOMETHING</span>
-                <span>
-                  <span className="status-dot" />
-                  {p.availability}
-                </span>
+            {!data.projects.length && (
+              <div className="empty-public">
+                <Layers size={30} />
+                <h3>Great things start with a first project.</h3>
+                <p>New ideas are taking shape. Check back soon.</p>
               </div>
-              <h2>
-                Have something
-                <br />
-                in <span className="serif">mind?</span>
-                <span className="contact-star">✳</span>
-              </h2>
-              <div className="contact-bottom">
+            )}
+            <div className="work-footnote">
+              <span>Always making room for the next idea.</span>
+              {safeUrl(p.github) && (
+                <ExternalLink className="text-link" href={safeUrl(p.github)}>
+                  More on GitHub
+                </ExternalLink>
+              )}
+            </div>
+          </section>
+          <Playground />
+          <section id="about" className="about-section">
+            <div className="section-shell">
+              <Reveal className="about-grid">
                 <div>
-                  <p>A good conversation is where great things begin.</p>
-                  <div className="email-row">
-                    <a className="email-link" href={`mailto:${p.email}`}>
-                      {p.email}
-                      <ArrowUpRight size={25} />
-                    </a>
-                    <button
-                      className="icon-button"
-                      onClick={copyEmail}
-                      aria-label="Copy email address"
-                    >
-                      {copying ? <Check size={17} /> : <Copy size={17} />}
-                    </button>
+                  <span className="eyebrow">02 — A LITTLE ABOUT ME</span>
+                  <h2>
+                    Big curiosity.
+                    <br />
+                    <span className="serif">Bigger ideas.</span>
+                    <span className="about-asterisk" aria-hidden="true">
+                      <Burst />
+                    </span>
+                  </h2>
+                  <div className="about-location">
+                    <MapPin size={17} />
+                    {p.location}
+                    <span> / </span>Open to what’s next
                   </div>
                 </div>
-                <div className="social-links">
-                  {safeUrl(p.github) && (
-                    <ExternalLink href={safeUrl(p.github)}>
-                      <Github size={17} />
-                      GitHub
-                    </ExternalLink>
-                  )}
-                  {safeUrl(p.linkedin) && (
-                    <ExternalLink href={safeUrl(p.linkedin)}>
-                      <Linkedin size={17} />
-                      LinkedIn
-                    </ExternalLink>
-                  )}
+                <div className="about-copy">
+                  <p className="summary-lead">{p.summary}</p>
+                  <p>{p.summaryExtra}</p>
+                  <div className="about-signature">
+                    <span className="signature">{p.shortName}.</span>
+                    <span>{p.role}</span>
+                  </div>
+                </div>
+              </Reveal>
+              <Reveal className="toolkit">
+                <div>
+                  <span className="eyebrow">MY EVERYDAY TOOLKIT</span>
+                  <p>
+                    The tools change.
+                    <br />
+                    The curiosity stays.
+                  </p>
+                </div>
+                <div className="skills">
+                  {p.skills.map((skill, i) => (
+                    <span key={i}>
+                      <span className="skill-dot" />
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </Reveal>
+            </div>
+          </section>
+          {data.experience.length > 0 && (
+            <section
+              id="experience"
+              className="section-shell experience-section"
+            >
+              <Reveal className="section-heading">
+                <div>
+                  <span className="eyebrow">THE JOURNEY</span>
+                  <h2>
+                    Learning. Building.
+                    <br />
+                    <span className="serif">Moving forward.</span>
+                  </h2>
+                </div>
+              </Reveal>
+              {data.experience.map((e) => (
+                <Reveal className="experience-row" key={e.id}>
+                  <span>{e.period}</span>
+                  <div>
+                    <h3>{e.role}</h3>
+                    <p className="experience-company">{e.company}</p>
+                    <p>{e.description}</p>
+                  </div>
+                  <BriefcaseBusiness size={23} />
+                </Reveal>
+              ))}
+            </section>
+          )}
+          <section id="resume" className="section-shell resume-section">
+            <Reveal className="resume-grid">
+              <div>
+                <span className="eyebrow">03 — THE ON-PAPER VERSION</span>
+                <h2>
+                  The person.
+                  <br />
+                  The skills.
+                  <br />
+                  <span className="serif">The PDF.</span>
+                </h2>
+                <p>
+                  Skills, experience, and everything in between.
+                  <br />
+                  Find the résumé that fits the conversation.
+                </p>
+                <div className="resume-decoration" aria-hidden="true">
+                  <FileText size={47} />
+                  <span>
+                    GOOD ON PAPER.
+                    <br />
+                    BETTER IN PERSON.
+                  </span>
+                  <ArrowUpRight size={24} />
+                </div>
+              </div>
+              <div className="resume-list">
+                {data.resumes.map((resume, i) => (
+                  <ResumeCard key={resume.id} resume={resume} index={i} />
+                ))}
+                {!data.resumes.length && (
+                  <div className="empty-public">
+                    <FileText size={30} />
+                    <h3>Your next opportunity starts here.</h3>
+                    <p>A résumé will be available here soon.</p>
+                  </div>
+                )}
+                <div className="resume-note">
+                  <FileText size={14} />
+                  {data.resumes.length}{" "}
+                  {data.resumes.length === 1 ? "résumé" : "résumés"} · Ready for
+                  your next opportunity
                 </div>
               </div>
             </Reveal>
-          </div>
-        </section>
-      </main>
-      <footer className="site-footer section-shell">
-        <span>
-          © {new Date().getFullYear()} {p.name}
-        </span>
-        <span>Built with intention. Always evolving.</span>
-        <a href="#home">
-          BACK TO TOP <ArrowUpRight size={14} />
-        </a>
-      </footer>
-      {studio && (
-        <Studio
-          data={data}
-          initialTab={studio}
-          onSave={save}
-          onClose={() => setStudio(null)}
-          notify={setToast}
-        />
-      )}
-      {activeProject && (
-        <ProjectDetail
-          project={activeProject}
-          onClose={() => setActiveProject(null)}
-        />
-      )}
-      <div
-        role="status"
-        aria-live="polite"
-        className={`toast ${toast ? "visible" : ""}`}
-      >
-        {toast && (
-          <>
-            <Circle size={11} fill="currentColor" />
-            {toast}
-          </>
+          </section>
+          <section id="contact" className="contact-section">
+            <div className="section-shell">
+              <Reveal>
+                <div className="contact-top">
+                  <span className="eyebrow">
+                    04 — YOUR IDEA. OUR NEXT CONVERSATION.
+                  </span>
+                  <span>
+                    <span className="status-dot" />
+                    {p.availability}
+                  </span>
+                </div>
+                <h2>
+                  Good things
+                  <br />
+                  start with <span className="serif">hello.</span>
+                  <span className="contact-star" aria-hidden="true">
+                    <Burst />
+                  </span>
+                </h2>
+                <div className="contact-bottom">
+                  <div>
+                    <p>A good conversation is where great things begin.</p>
+                    <div className="email-row">
+                      <a className="email-link" href={`mailto:${p.email}`}>
+                        {p.email}
+                        <ArrowUpRight size={25} />
+                      </a>
+                      <button
+                        className="icon-button"
+                        onClick={copyEmail}
+                        aria-label="Copy email address"
+                      >
+                        {copying ? <Check size={17} /> : <Copy size={17} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="social-links">
+                    {safeUrl(p.github) && (
+                      <ExternalLink href={safeUrl(p.github)}>
+                        <Github size={17} />
+                        GitHub
+                      </ExternalLink>
+                    )}
+                    {safeUrl(p.linkedin) && (
+                      <ExternalLink href={safeUrl(p.linkedin)}>
+                        <Linkedin size={17} />
+                        LinkedIn
+                      </ExternalLink>
+                    )}
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </section>
+        </main>
+        <footer className="site-footer section-shell">
+          <span>
+            © {new Date().getFullYear()} {p.name}
+          </span>
+          <span>Built with curiosity. A little differently.</span>
+          <a href="#home">
+            BACK TO TOP <ArrowUpRight size={14} />
+          </a>
+        </footer>
+        {activeProject && (
+          <ProjectDetail
+            project={activeProject}
+            onClose={() => setActiveProject(null)}
+          />
         )}
-      </div>
-    </MotionConfig>
+        <div
+          role="status"
+          aria-live="polite"
+          className={`toast ${toast ? "visible" : ""}`}
+        >
+          {toast && (
+            <>
+              <Circle size={11} fill="currentColor" />
+              {toast}
+            </>
+          )}
+        </div>
+      </MotionConfig>
+    </MotionPreference.Provider>
   );
 }

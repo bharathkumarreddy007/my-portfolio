@@ -1,101 +1,142 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import path from "node:path";
-const pdf = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF");
-const openStudio = async (page, tab) => {
-  await page.getByRole("button", { name: "Edit portfolio" }).click();
-  if (tab) await page.getByRole("tab", { name: tab, exact: true }).click();
-};
-const save = async (page) => {
-  await page.getByRole("button", { name: "Save changes", exact: true }).click();
-  await expect(page.getByRole("dialog")).not.toBeVisible();
-};
 
-test("profile, skills, photo, and experience persist after a reload", async ({
+test("public portfolio ignores old browser edits and has no editing controls", async ({
   page,
 }) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
-  await expect(page.locator("h1")).toContainText("Thoughtful code.");
-  await openStudio(page);
-  await page
-    .getByLabel("Full name", { exact: true })
-    .fill("Bharath — Software Engineer");
-  await page
-    .getByLabel("Short introduction")
-    .fill("I build useful software and thoughtful experiences.");
-  await page
-    .getByLabel("Professional summary")
-    .fill("My updated professional summary.");
-  await page
-    .getByLabel("Skills (one per line)")
-    .fill("React\nTypeScript\nPython");
-  await page
-    .locator(".photo-edit input[type=file]")
-    .setInputFiles("profile.jpg");
-  await page.getByRole("tab", { name: "Experience", exact: true }).click();
-  await page.getByRole("button", { name: "Add entry" }).click();
-  await page.getByLabel("Role / qualification").fill("Software Developer");
-  await page.getByLabel("Company / institution").fill("Example Company");
-  await page.getByLabel("Period", { exact: true }).fill("2025 — Present");
-  await page
-    .getByLabel("Responsibilities & achievements")
-    .fill("Built accessible interfaces.");
-  await save(page);
-  await page.reload();
-  await expect(page.locator(".summary-lead")).toHaveText(
-    "My updated professional summary.",
+  await page.evaluate(async () => {
+    await new Promise((resolve, reject) => {
+      const request = indexedDB.open("bharath-portfolio-studio", 1);
+      request.onupgradeneeded = () =>
+        request.result.createObjectStore("portfolio");
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result,
+          tx = db.transaction("portfolio", "readwrite");
+        tx.objectStore("portfolio").put(
+          {
+            profile: {
+              name: "Unpublished private edit",
+              headline: "Private browser content",
+            },
+          },
+          "content",
+        );
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+      };
+    });
+  });
+  await page.goto("/#studio");
+  await expect(page.locator("h1")).toContainText("Build things.");
+  await expect(page.locator(".portrait-caption")).toContainText(
+    "Bharath Kumar Reddy",
   );
-  await expect(page.locator(".skills")).toHaveText("ReactTypeScriptPython");
-  await expect(page.locator("#experience")).toContainText("Example Company");
-  await expect(page.locator(".portrait-frame img")).toHaveAttribute(
-    "src",
-    /^blob:/,
-  );
+  await expect(page.getByText("Unpublished private edit")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", {
+      name: /edit portfolio|add project|manage résumés|save changes/i,
+    }),
+  ).toHaveCount(0);
+  await expect(page.locator("input[type=file]")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
-test("projects support case studies, media playback, filtering, and deletion", async ({
+test("project filters and keyboard-accessible case studies work", async ({
   page,
 }) => {
   await page.goto("/");
-  await openStudio(page, "Projects");
-  await page.getByRole("button", { name: "Add project", exact: true }).click();
-  await page.getByLabel("Project title").fill("Accessible Task Board");
-  await page.getByLabel("Category", { exact: true }).fill("Product");
+  await page.getByRole("button", { name: "Data & AI", exact: true }).click();
+  await expect(page.locator(".project-card")).toHaveCount(2);
   await page
-    .getByLabel("Short description")
-    .fill("A keyboard-friendly task board.");
-  await page
-    .getByLabel("Technologies (comma separated)")
-    .fill("React,TypeScript");
-  await page
-    .getByLabel("The challenge", { exact: true })
-    .fill("Make planning accessible.");
-  await page.getByLabel("Live project URL").fill("https://example.com");
-  await page
-    .locator(".media-upload")
-    .nth(0)
-    .locator("input")
-    .setInputFiles("profile.jpg");
-  await page
-    .locator(".media-upload")
-    .nth(1)
-    .locator("input")
-    .setInputFiles("tests/fixtures/demo.webm");
-  await save(page);
-  await page.reload();
-  await page.getByRole("button", { name: "Product", exact: true }).click();
-  await expect(page.locator(".project-card")).toHaveCount(1);
-  await page
-    .getByRole("button", { name: "View Accessible Task Board", exact: true })
+    .getByRole("button", { name: "View E-Commerce Dashboard", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toContainText(
-    "Make planning accessible.",
+  await expect(page.getByRole("dialog")).toContainText("The challenge");
+  await expect(page.getByRole("link", { name: "View code" })).toHaveAttribute(
+    "href",
+    "https://github.com/bharathkumarreddy007",
   );
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "View E-Commerce Dashboard",
+      exact: true,
+    }),
+  ).toBeFocused();
+  await page.getByRole("button", { name: /All work/ }).click();
+  await expect(page.locator(".project-card")).toHaveCount(3);
+});
+
+test("color moods persist, playful controls respond, and motion can be paused", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Hot pink mood" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-mood", "pink");
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Hot pink mood" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  const shape = page.locator(".shape-0");
+  const before = await shape.evaluate((el) => getComputedStyle(el).transform);
+  await page.getByRole("button", { name: "Shuffle the shapes" }).click();
+  await expect
+    .poll(() => shape.evaluate((el) => getComputedStyle(el).transform))
+    .not.toBe(before);
+  await page.getByRole("button", { name: "Make something happen" }).click();
+  await expect(page.locator(".playground-message")).toHaveText(
+    "A little curiosity goes a long way.",
+  );
+  await page.getByRole("button", { name: "Pause animations" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-motion", "paused");
+  expect(
+    await page
+      .locator(".ticker>div")
+      .evaluate((el) => getComputedStyle(el).animationName),
+  ).toBe("none");
+  await page.getByRole("button", { name: "Make something happen" }).click();
+  await expect(page.locator(".playground-message")).toHaveText(
+    "Make something that makes you smile.",
+  );
+  await expect(page.locator(".confetti")).toHaveCount(0);
+  await page.getByRole("button", { name: "Enable animations" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-motion", "active");
+});
+
+test("source-defined project video, cover, and PDF work as repository assets", async ({
+  page,
+}) => {
+  // Simulate the owner editing src/data.js; the public app must use these paths.
+  await page.route("**/src/data.js", async (route) => {
+    const response = await route.fetch();
+    let source = await response.text();
+    source = source.replace(
+      /video:\s*null/,
+      'video: "tests/fixtures/demo.webm"',
+    );
+    source = source.replace(/cover:\s*null/, 'cover: "profile.jpg"');
+    source = source.replace(
+      /https:\/\/drive\.google\.com\/file\/d\/[^"\s]+/,
+      "tests/fixtures/resume.pdf",
+    );
+    await route.fulfill({ response, body: source });
+  });
+  await page.goto("/");
+  await expect(page.locator(".project-cover")).toHaveAttribute(
+    "src",
+    /\/profile.jpg$/,
+  );
+  await page
+    .getByRole("button", { name: "View Secure Query Processing", exact: true })
+    .click();
   const video = page.locator(".case-visual video");
-  await expect(video).toHaveAttribute("src", /^blob:/);
   await expect
     .poll(() => video.evaluate((el) => el.readyState))
     .toBeGreaterThanOrEqual(1);
@@ -106,129 +147,45 @@ test("projects support case studies, media playback, filtering, and deletion", a
   await expect
     .poll(() => video.evaluate((el) => el.currentTime))
     .toBeGreaterThan(0);
-  await expect(
-    page.getByRole("link", { name: "Visit project" }),
-  ).toHaveAttribute("href", "https://example.com/");
-  await page.getByRole("button", { name: "Close dialog" }).click();
-  await openStudio(page, "Projects");
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Accessible Task Board", exact: true })
-    .click();
-  page.once("dialog", (d) => d.accept());
-  await page
-    .getByRole("button", { name: "Remove project", exact: true })
-    .click();
-  await save(page);
-  await expect(
-    page.getByRole("button", {
-      name: "View Accessible Task Board",
-      exact: true,
-    }),
-  ).toHaveCount(0);
-});
-
-test("multiple PDF résumés download correctly and backups restore uploaded files", async ({
-  page,
-  browser,
-}) => {
-  await page.goto("/");
-  await openStudio(page, "Résumés");
-  await page.locator(".resume-upload input").setInputFiles([
-    { name: "Frontend.pdf", mimeType: "application/pdf", buffer: pdf },
-    { name: "Backend.pdf", mimeType: "application/pdf", buffer: pdf },
-  ]);
-  await page
-    .locator(".editable-resume")
-    .last()
-    .getByRole("button", { name: "Make primary" })
-    .click();
-  await page.getByRole("tab", { name: "Projects", exact: true }).click();
-  await page
-    .locator(".media-upload")
-    .nth(1)
-    .locator("input")
-    .setInputFiles("tests/fixtures/demo.webm");
-  await save(page);
-  await page.reload();
-  await expect(page.locator(".resume-card")).toHaveCount(3);
-  await expect(page.locator(".resume-card").first()).toContainText("Backend");
+  await page.keyboard.press("Escape");
   const downloadPromise = page.waitForEvent("download");
   await page
-    .getByRole("link", { name: "Download Backend", exact: true })
+    .getByRole("link", { name: "Download My résumé", exact: true })
     .click();
   const download = await downloadPromise;
-  expect(await readFile(await download.path())).toEqual(pdf);
-  await openStudio(page, "Backup");
-  const backupPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export backup" }).click();
-  const backup = await backupPromise;
-  const backupPath = await backup.path();
-  const exported = JSON.parse(await readFile(backupPath, "utf8"));
-  expect(exported.resumes[0].file.__file).toBe(true);
-  expect(exported.projects[0].video.type).toBe("video/webm");
-  const other = await browser.newContext();
-  const restored = await other.newPage();
-  await restored.goto("/");
-  await openStudio(restored, "Backup");
-  restored.once("dialog", (d) => d.accept());
-  await restored.locator(".backup-grid input").setInputFiles({
-    name: "backup.json",
-    mimeType: "application/json",
-    buffer: await readFile(backupPath),
-  });
-  await expect(restored.locator(".studio-footer")).toContainText("unsaved");
-  await save(restored);
-  await restored.reload();
-  await expect(restored.locator(".resume-card")).toHaveCount(3);
-  await expect(restored.locator(".resume-card").first()).toContainText(
-    "Backend",
+  expect(await readFile(await download.path())).toEqual(
+    await readFile("tests/fixtures/resume.pdf"),
   );
-  await restored
-    .getByRole("button", { name: "View Secure Query Processing", exact: true })
-    .click();
-  await expect
-    .poll(() =>
-      restored.locator(".case-visual video").evaluate((el) => el.readyState),
-    )
-    .toBeGreaterThanOrEqual(1);
-  await other.close();
+  const urls = await page.evaluate(async () => {
+    const { mediaUrl } = await import("/src/media.js");
+    return [
+      mediaUrl("javascript:alert(1)"),
+      mediaUrl("//example.com/x"),
+      mediaUrl("../private"),
+      mediaUrl("media/resume.pdf"),
+    ];
+  });
+  expect(urls.slice(0, 3)).toEqual(["", "", ""]);
+  expect(urls[3]).toMatch(/\/media\/resume.pdf$/);
 });
 
-test("invalid uploads and malicious backups leave saved content intact", async ({
+test("responsive layouts and reduced motion support phones, tablets, and desktop", async ({
   page,
 }) => {
-  await page.goto("/");
-  await openStudio(page, "Résumés");
-  await page.locator(".resume-upload input").setInputFiles({
-    name: "bad.txt",
-    mimeType: "text/plain",
-    buffer: Buffer.from("invalid"),
-  });
-  await expect(page.getByRole("alert")).toContainText("PDF");
-  await expect(page.locator(".editable-resume")).toHaveCount(1);
-  await page.getByRole("tab", { name: "Backup", exact: true }).click();
-  await page.locator(".backup-grid input").setInputFiles({
-    name: "bad.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(
-      '{"version":1,"profile":{"github":"javascript:alert(1)"}}',
-    ),
-  });
-  await expect(page.getByRole("alert")).toContainText(
-    "not a valid portfolio backup",
-  );
-  await page.getByRole("button", { name: "Close", exact: true }).click();
-  await expect(page.locator("h1")).toContainText("Thoughtful code.");
-});
-
-test("mobile navigation, reduced motion, keyboard dialog close, and responsive layout", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.getByRole("navigation")).not.toBeVisible();
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 950 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      `overflow at ${width}`,
+    ).toBe(true);
+    await expect(page.locator("h1")).toBeVisible();
+  }
+  await page.screenshot({ path: "/tmp/creative-desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Open menu", exact: true }).click();
   await page
     .getByRole("navigation")
@@ -237,20 +194,73 @@ test("mobile navigation, reduced motion, keyboard dialog close, and responsive l
   await expect(page).toHaveURL(/#about$/);
   await expect(page.getByRole("navigation")).not.toBeVisible();
   expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  expect(
     await page
       .locator(".ticker>div")
       .evaluate((el) => getComputedStyle(el).animationName),
   ).toBe("none");
-  await openStudio(page);
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Edit portfolio" }),
-  ).toBeFocused();
-  await page.screenshot({ path: "/tmp/portfolio-mobile.png", fullPage: true });
+    page.getByRole("button", {
+      name: "Reduced motion is enabled on your device",
+    }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Make something happen" }).click();
+  await expect(page.locator(".confetti")).toHaveCount(0);
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.screenshot({ path: "/tmp/creative-mobile.png", fullPage: true });
+});
+
+test("live WebGL sculpture renders, rotates by keyboard, and changes composition", async ({
+  page,
+}) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.locator(".playground").scrollIntoViewIfNeeded();
+  await expect(page.locator(".three-experience")).toHaveAttribute(
+    "data-scene-status",
+    "ready",
+    { timeout: 20000 },
+  );
+  const canvas = page.locator(".three-canvas canvas");
+  await expect(canvas).toHaveAttribute("data-rendered", "true");
+  await canvas.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(canvas).toHaveAttribute("data-rotation", "0.2");
+  await page.getByRole("button", { name: "Reset sculpture view" }).click();
+  await expect(canvas).toHaveAttribute("data-rotation", "0");
+  await page.getByRole("button", { name: "Make something happen" }).click();
+  await expect(canvas).toHaveAttribute("data-pose", "1");
+  expect(errors).toEqual([]);
+});
+
+test("unsupported WebGL falls back to artwork without breaking the portfolio", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+      if (
+        type === "webgl" ||
+        type === "webgl2" ||
+        type === "experimental-webgl"
+      )
+        return null;
+      return original.call(this, type, ...args);
+    };
+  });
+  await page.goto("/");
+  await page.locator(".playground").scrollIntoViewIfNeeded();
+  await expect(page.locator(".three-experience")).toHaveAttribute(
+    "data-scene-status",
+    "fallback",
+  );
+  await expect(page.locator(".three-fallback")).toBeVisible();
+  await page.getByRole("button", { name: "Make something happen" }).click();
+  await expect(page.locator(".playground-message")).toHaveText(
+    "A little curiosity goes a long way.",
+  );
+  await expect(
+    page.getByRole("button", { name: "Rotate sculpture right" }),
+  ).toHaveCount(0);
 });
