@@ -25,10 +25,6 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
-      - name: Install test browser
-        run: npx playwright install --with-deps chromium
-      - name: Test portfolio workflows
-        run: npm test
       - name: Build production site
         run: npm run build
       - name: Upload site

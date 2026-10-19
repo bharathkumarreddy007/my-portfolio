@@ -1,0 +1,305 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Mochi · the portfolio pet
+   A fixed companion drawn entirely in SVG. Glass speech bubble,
+   sparkle feedback and a little apology form.
+   ───────────────────────────────────────────────────────────────── */
+
+.pet {
+  position: relative;
+  display: block;
+  overflow: visible;
+}
+
+.pet-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 1%;
+  width: 60%;
+  height: 13%;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.5),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.pet-body {
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+}
+
+.pet-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.42));
+}
+
+/* --------------------------- companion -------------------------- */
+
+.pet-companion {
+  position: fixed;
+  right: clamp(14px, 2.2vw, 30px);
+  bottom: clamp(14px, 2.4vh, 26px);
+  z-index: 150;
+  pointer-events: none;
+  transition:
+    opacity 0.55s var(--ease),
+    transform 0.55s var(--ease);
+}
+
+.pet-companion.is-hidden {
+  opacity: 0;
+  transform: translateY(28px) scale(0.88);
+  pointer-events: none;
+}
+
+.pet-drag {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.pet-figure {
+  position: relative;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  border-radius: 50%;
+  transition: transform 0.4s var(--ease);
+}
+
+.pet-figure:active {
+  cursor: grabbing;
+}
+
+.pet-figure:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 6px;
+}
+
+.pet-figure::before {
+  content: "";
+  position: absolute;
+  inset: -22%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 46%,
+    rgba(124, 92, 255, 0.34),
+    rgba(34, 211, 238, 0.1) 45%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.5s var(--ease);
+}
+
+.pet-figure:hover::before,
+.pet-figure:focus-visible::before {
+  opacity: 1;
+}
+
+/* ----------------------------- bubble --------------------------- */
+
+.pet-bubble {
+  position: relative;
+  max-width: min(260px, 68vw);
+  padding: 0.72rem 0.85rem;
+  border-radius: 16px 16px 5px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(12, 14, 30, 0.94);
+  box-shadow:
+    0 24px 50px -24px rgba(0, 0, 0, 0.95),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  letter-spacing: 0.005em;
+  pointer-events: none;
+  transform-origin: bottom right;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .pet-bubble {
+    background: rgba(12, 14, 30, 0.72);
+    backdrop-filter: blur(16px) saturate(140%);
+  }
+}
+
+.pet-bubble::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  bottom: -6px;
+  width: 11px;
+  height: 11px;
+  background: inherit;
+  border-right: 1px solid rgba(255, 255, 255, 0.13);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.13);
+  transform: rotate(45deg);
+}
+
+.pet-bubble.has-form {
+  pointer-events: auto;
+  width: min(250px, 68vw);
+  max-width: none;
+}
+
+.pet-bubble-text {
+  display: block;
+}
+
+/* ----------------------------- form ----------------------------- */
+
+.pet-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+}
+
+.pet-form-row {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.pet-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.44rem 0.55rem;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 0.76rem;
+  transition: border-color 0.3s var(--ease);
+}
+
+.pet-form input::placeholder {
+  color: var(--dim);
+}
+
+.pet-form input:focus {
+  outline: none;
+  border-color: rgba(124, 92, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pet-form button {
+  padding: 0 0.7rem;
+  border-radius: 9px;
+  background: var(--grad-cool);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    filter 0.3s var(--ease),
+    transform 0.3s var(--ease);
+}
+
+.pet-form button:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.pet-hint {
+  color: var(--pink);
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
+}
+
+/* --------------------------- feedback --------------------------- */
+
+.pet-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 280;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.pet-spark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+  will-change: transform, opacity;
+}
+
+.pet-spark.is-star {
+  border-radius: 1px;
+  width: 6px;
+  height: 6px;
+  clip-path: polygon(
+    50% 0%,
+    61% 39%,
+    100% 50%,
+    61% 61%,
+    50% 100%,
+    39% 61%,
+    0% 50%,
+    39% 39%
+  );
+}
+
+.pet-hearts {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.pet-heart {
+  position: absolute;
+  left: 50%;
+  bottom: 62%;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--pink);
+  text-shadow: 0 0 14px rgba(244, 114, 182, 0.75);
+  will-change: transform, opacity;
+}
+
+/* --------------------------- states ----------------------------- */
+
+html.is-locked .pet-companion {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .pet-companion {
+    right: 10px;
+    bottom: 12px;
+  }
+
+  .pet-figure {
+    transform: scale(0.72);
+    transform-origin: bottom right;
+  }
+
+  .pet-bubble {
+    font-size: 0.76rem;
+    padding: 0.62rem 0.72rem;
+  }
+}
+
+@media print {
+  .pet-companion,
+  .pet-fx {
+    display: none;
+  }
+}

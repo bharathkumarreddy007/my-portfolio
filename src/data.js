@@ -1,19 +1,25 @@
-// Edit this file in GitHub or VS Code, then push to main to publish.
-// Put images, videos, and PDFs in public/media/ and reference them as "media/filename.ext".
-// profile.photo, project.cover, and project.video accept those paths or HTTPS URLs.
+// ───────────────────────────────────────────────────────────────────────────
+// All portfolio content lives in this one file.
+// Edit it in VS Code or on GitHub, commit, and push to main to publish.
+// Images, videos and PDFs go in public/media/ and are referenced as
+// "media/filename.ext" (full HTTPS URLs work too).
+// ───────────────────────────────────────────────────────────────────────────
+
 export const initialData = {
-  version: 1,
+  version: 2,
+
   profile: {
     name: "A.V. Bharath Kumar Reddy",
     shortName: "Bharath",
     role: "Full-stack developer & AI enthusiast",
+    // Lines are separated with \n — each line animates in on its own.
     headline: "Build things.\nBreak boring.",
     intro:
-      "A curious developer turning “what if?” into things you can click, use, and love. Full-stack thinking. A soft spot for AI.",
+      "A curious developer turning “what if?” into things you can click, use and love. Full-stack thinking, a soft spot for AI, and an obsession with how things feel.",
     summary:
-      "I’m a final-year student and curious builder at the intersection of software, data, and design. I enjoy connecting the dots — from an idea on paper to a working product that makes someone’s day a little easier.",
+      "I’m a final-year student and curious builder at the intersection of software, data and design. I enjoy connecting the dots — from an idea on paper to a working product that makes someone’s day a little easier.",
     summaryExtra:
-      "My interests span Java full-stack development, intelligent systems, and thoughtful interfaces. Away from the keyboard, you’ll find me playing cricket, thinking a few moves ahead in chess, or learning something new.",
+      "My interests span Java full-stack development, intelligent systems and thoughtful interfaces. Away from the keyboard you’ll find me playing cricket, thinking a few moves ahead in chess, or learning something new.",
     location: "India",
     email: "avbharath2002@gmail.com",
     github: "https://github.com/bharathkumarreddy007",
@@ -33,7 +39,36 @@ export const initialData = {
       "Responsive Design",
       "Problem Solving",
     ],
+    // Short, honest numbers for the about section.
+    stats: [
+      { value: "Final year", label: "B.Tech student" },
+      { value: "10+", label: "Tools in the toolkit" },
+      { value: "3", label: "Featured projects" },
+      { value: "Always", label: "Learning something new" },
+    ],
+    // What I actually do — shown as cards in the about section.
+    capabilities: [
+      {
+        title: "Full-stack engineering",
+        detail:
+          "From schema to screen. Java and Spring on the back end, clean JavaScript and responsive markup up front.",
+        tags: ["Java", "Spring", "MySQL", "REST"],
+      },
+      {
+        title: "Data & machine learning",
+        detail:
+          "Making messy numbers say something useful — analysis, similarity, and recommendations that feel personal.",
+        tags: ["Python", "Pandas", "ML", "SQL"],
+      },
+      {
+        title: "Interface craft",
+        detail:
+          "Interfaces that are quick, legible and a little bit playful. Motion with a purpose, never decoration for its own sake.",
+        tags: ["React", "Motion", "Design systems", "Accessibility"],
+      },
+    ],
   },
+
   projects: [
     {
       id: "secure-query",
@@ -53,14 +88,14 @@ export const initialData = {
       solution:
         "A Java and MySQL project exploring encrypted storage and secure query processing.",
       outcome:
-        "A practical exploration of data security, backend architecture, and query design.",
+        "A practical exploration of data security, backend architecture and query design.",
     },
     {
       id: "commerce",
       title: "E-Commerce Dashboard",
       category: "Data & AI",
       description:
-        "Turning sales data into a clearer picture. An analytics project exploring the patterns behind products, customers, and revenue.",
+        "Turning sales data into a clearer picture. An analytics project exploring the patterns behind products, customers and revenue.",
       tags: ["Python", "SQL", "Tableau"],
       year: "Featured project",
       visual: "chart",
@@ -70,7 +105,7 @@ export const initialData = {
       cover: null,
       challenge: "Make raw sales data easier to explore and understand.",
       solution:
-        "Use Python, SQL, Pandas, and Tableau to analyze data and present the findings visually.",
+        "Use Python, SQL, Pandas and Tableau to analyse data and present the findings visually.",
       outcome:
         "An exploration of the complete analytics workflow, from raw data to visual storytelling.",
     },
@@ -95,7 +130,11 @@ export const initialData = {
         "Hands-on learning in recommendation systems and similarity-based retrieval.",
     },
   ],
+
+  // Add entries here and the experience timeline section appears automatically.
+  // Shape: { id, role, company, period, description }
   experience: [],
+
   resumes: [
     {
       id: "original-resume",
